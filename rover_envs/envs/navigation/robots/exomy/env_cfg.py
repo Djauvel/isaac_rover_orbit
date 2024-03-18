@@ -9,7 +9,7 @@ from rover_envs.envs.navigation.rover_env_cfg import RoverEnvCfg
 
 @configclass
 class ExoMyEnvCfg(RoverEnvCfg):
-    """Configuration for the AAU rover environment."""
+    """Configuration for the ExoMy rover environment."""
 
     def __post_init__(self):
         super().__post_init__()

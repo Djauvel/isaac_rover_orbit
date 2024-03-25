@@ -13,3 +13,12 @@ gym.register(
         "best_model_path": f"{os.path.dirname(__file__)}/policies/best_agent.pt",
     }
 )
+
+gym.register(
+    id="ExomySandbox-v0",
+    entry_point='omni.isaac.orbit.envs:RLTaskEnv',
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": env_cfg.ExoMyEnvCfg,
+    }
+)

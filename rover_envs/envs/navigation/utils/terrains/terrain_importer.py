@@ -183,6 +183,65 @@ class RoverTerrainImporter(TerrainImporter):
         """
         return self._terrainManager.spawn_locations
 
+class ExomyTerrainImporter(TerrainImporter):
+    def __init__(self, cfg: TerrainImporterCfg):
+        super().__init__(cfg)
+        self._cfg = cfg
+        self._terrainManager = TerrainManager(num_envs=self._cfg.num_envs, device=self.device)
+        # Specifying the bounds of the area where we want to generate waypoints [low_bound,high_bound] in meters
+        self.x_bound = [-3,3]
+        self.y_bound = [-5,5]
+
+    def sample_new_targets(self, env_ids):
+        # We need to keep track of the original env_ids, because we need to resample some of them
+        original_env_ids = env_ids
+
+        # Initialize the target position
+        target_position = torch.zeros(self._cfg.num_envs, 3, device=self.device)
+
+        # Sample new targets
+        reset_buf_len = len(env_ids)
+        while (reset_buf_len > 0):
+            # sample new random targets
+            # print(reset_buf_len)
+            # print(f'env_ids: {env_ids}')
+            target_position[env_ids] = self.generate_random_targets(env_ids, target_position)
+
+            # Here we check if the target is valid, and if not, we resample a new random target
+            env_ids, reset_buf_len = self._terrainManager.check_if_target_is_valid(
+                env_ids, target_position[env_ids, 0:2], device=self.device)
+
+        # Adjust the height of the target, so that it matches the terrain
+        target_position[original_env_ids, 2] = self._terrainManager._heightmap_manager.get_height_at(
+            target_position[original_env_ids, 0:2])
+
+        return target_position[original_env_ids]
+
+    def generate_random_targets(self, env_ids, target_position):
+        """
+        This function generates random targets for the rover to navigate to.
+        The targets are generated in a circle around the environment origin.
+
+        Args:
+            env_ids: The ids of the environments for which we need to generate targets.
+            target_position: The target position buffer.
+        """
+        target_position[env_ids, 0] = torch.rand(len(env_ids), device=self.device) * (self.x_bound[1] - self.x_bound[0]) + (self.x_bound[1] + self.x_bound[0]) / 2
+        target_position[env_ids, 1] = torch.rand(len(env_ids), device=self.device) * (self.y_bound[1] - self.y_bound[0]) + (self.y_bound[1] + self.y_bound[0]) / 2
+
+        return target_position[env_ids]
+
+    def get_spawn_locations(self):
+        """
+        This function returns valid spawn locations, that avoids spawning the rover on top of obstacles.
+
+        Returns:
+            spawn_locations: The spawn locations buffer. Shape (num_envs, 3).
+        """
+        return self._terrainManager.spawn_locations
+
+
+
 
 # class TerrainBasedPositionCommandCustom(TerrainBasedPositionCommand):
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import MISSING
 
+import os
 import omni.isaac.orbit.sim as sim_utils
 from omni.isaac.orbit.assets import ArticulationCfg, AssetBaseCfg
 from omni.isaac.orbit.envs import RLTaskEnvCfg
@@ -25,6 +26,7 @@ from omni.isaac.orbit.utils.noise import AdditiveUniformNoiseCfg as Unoise  # no
 import rover_envs.envs.navigation.mdp as mdp
 from rover_envs.assets.terrains.debug.debug_terrains import DebugTerrainSceneCfg  # noqa: F401
 from rover_envs.assets.terrains.mars import MarsTerrainSceneCfg  # noqa: F401
+from rover_envs.envs.navigation.ExoMy_ERC_env_cfg import ExoMyTerrainSceneCfg
 from rover_envs.envs.navigation.utils.terrains.commands_cfg import TerrainBasedPositionCommandCfg  # noqa: F401
 # from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBasedPositionCommandCustom  # noqa: F401
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import RoverTerrainImporter  # noqa: F401
@@ -36,7 +38,7 @@ from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBa
 
 
 @configclass
-class RoverSceneCfg(DebugTerrainSceneCfg):
+class RoverSceneCfg(ExoMyTerrainSceneCfg):
     """
     Rover Scene Configuration
 
@@ -52,8 +54,6 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
             color_temperature=4500.0,
             intensity=100,
             enable_color_temperature=True,
-            texture_file="/home/anton/Downloads/image(12).png",
-            texture_format="latlong",
         ),
     )
 
@@ -69,19 +69,19 @@ class RoverSceneCfg(DebugTerrainSceneCfg):
     # AAU_ROVER_SIMPLE_CFG.replace(
     #     prim_path="{ENV_REGEX_NS}/Robot")
 
-    contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
-        filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
-    )
-    # contact_sensor = None
+    #contact_sensor = ContactSensorCfg(
+    #    prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
+    #    filter_prim_paths_expr=["/World/terrain/terrain/obstacles/"],
+    #)
+    contact_sensor = None
 
     height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/Body",
         offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
         attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[3.0, 3.0]),
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[5.0, 5.0]),
         debug_vis=False,
-        mesh_prim_paths=["/World/terrain/hidden_terrain"],
+        mesh_prim_paths=["/World/terrain/terrain/EzGezV2ExtraLarge/Terrain_v1"],
         max_distance=100.0,
     )
 
@@ -101,66 +101,67 @@ class ObservationCfg:
     @configclass
     class PolicyCfg(ObsGroup):
         actions = ObsTerm(func=mdp.last_action)
-        distance = ObsTerm(func=mdp.distance_to_target_euclidean, params={
-                           "command_name": "target_pose"}, scale=0.11)
-        heading = ObsTerm(
-            func=mdp.angle_to_target_observation,
-            params={
-                "command_name": "target_pose",
-            },
-            scale=1 / math.pi,
-        )
-        height_scan = ObsTerm(
-            func=mdp.height_scan_rover,
-            scale=1,
-            params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
-        )
-
-        def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = True
+        #distance = ObsTerm(func=mdp.distance_to_target_euclidean, params={
+        #                   "command_name": "target_pose"}, scale=0.11)
+    #    heading = ObsTerm(
+    #        func=mdp.angle_to_target_observation,
+    #        params={
+    #            "command_name": "target_pose",
+    #        },
+    #        scale=1 / math.pi,
+    #    )
+    #    height_scan = ObsTerm(
+    #        func=mdp.height_scan_rover,
+    #        scale=1,
+    #        params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+    #    )
+#
+    #    def __post_init__(self):
+    #        self.enable_corruption = True
+    #        self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
 
 
 @configclass
 class RewardsCfg:
-    distance_to_target = RewTerm(
-        func=mdp.distance_to_target_reward,
-        weight=5.0,
-        params={"command_name": "target_pose"},
-    )
-    reached_target = RewTerm(
-        func=mdp.reached_target,
-        weight=5.0,
-        params={"command_name": "target_pose", "threshold": 0.18},
-    )
     oscillation = RewTerm(
         func=mdp.oscillation_penalty,
         weight=-0.1,
         params={},
     )
-    angle_to_target = RewTerm(
-        func=mdp.angle_to_target_penalty,
-        weight=-1.5,
+
+    distance_to_target = RewTerm(
+        func=mdp.distance_to_target_reward,
+        weight=5.0,
         params={"command_name": "target_pose"},
     )
-    heading_soft_contraint = RewTerm(
-        func=mdp.heading_soft_contraint,
-        weight=-0.5,
-        params={"asset_cfg": SceneEntityCfg(name="robot")},
-    )
-    collision = RewTerm(
-        func=mdp.collision_penalty,
-        weight=-2.0,
-        params={"sensor_cfg": SceneEntityCfg(
-            "contact_sensor"), "threshold": 1.0},
-    )
-    far_from_target = RewTerm(
-        func=mdp.far_from_target_reward,
-        weight=-2.0,
-        params={"command_name": "target_pose", "threshold": 11.0},
-    )
+    #reached_target = RewTerm(
+    #    func=mdp.reached_target,
+    #    weight=5.0,
+    #    params={"command_name": "target_pose", "threshold": 0.18},
+    #)
+    #angle_to_target = RewTerm(
+    #    func=mdp.angle_to_target_penalty,
+    #    weight=-1.5,
+    #    params={"command_name": "target_pose"},
+    #)
+    #heading_soft_contraint = RewTerm(
+    #    func=mdp.heading_soft_contraint,
+    #    weight=-0.5,
+    #    params={"asset_cfg": SceneEntityCfg(name="robot")},
+    #)
+    #collision = RewTerm(
+    #    func=mdp.collision_penalty,
+    #    weight=-2.0,
+    #    params={"sensor_cfg": SceneEntityCfg(
+    #        "contact_sensor"), "threshold": 1.0},
+    #)
+    #far_from_target = RewTerm(
+    #    func=mdp.far_from_target_reward,
+    #    weight=-2.0,
+    #    params={"command_name": "target_pose", "threshold": 11.0},
+    #)
 
 
 @configclass
@@ -168,19 +169,19 @@ class TerminationsCfg:
     """Termination conditions for the task."""
 
     time_limit = DoneTerm(func=mdp.time_out, time_out=True)
-    is_success = DoneTerm(
-        func=mdp.is_success,
-        params={"command_name": "target_pose", "threshold": 0.18},
-    )
-    far_from_target = DoneTerm(
-        func=mdp.far_from_target,
-        params={"command_name": "target_pose", "threshold": 11.0},
-    )
-    collision = DoneTerm(
-        func=mdp.collision_with_obstacles,
-        params={"sensor_cfg": SceneEntityCfg(
-            "contact_sensor"), "threshold": 1.0},
-    )
+    #is_success = DoneTerm(
+    #    func=mdp.is_success,
+    #    params={"command_name": "target_pose", "threshold": 0.18},
+    #)
+    #far_from_target = DoneTerm(
+    #    func=mdp.far_from_target,
+    #    params={"command_name": "target_pose", "threshold": 11.0},
+    #)
+    #collision = DoneTerm(
+    #    func=mdp.collision_with_obstacles,
+    #    params={"sensor_cfg": SceneEntityCfg(
+    #        "contact_sensor"), "threshold": 1.0},
+    #)
 
 
 # "mdp.illegal_contact
@@ -203,13 +204,13 @@ class CommandsCfg:
 @configclass
 class RandomizationCfg:
     """Randomization configuration for the task."""
-    # startup_state = RandTerm(
-    #     func=mdp.reset_root_state_rover,
-    #     mode="startup",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg(name="robot"),
-    #     },
-    # )
+    startup_state = RandTerm(
+        func=mdp.reset_root_state_rover,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg(name="robot"),
+        },
+    )
     reset_state = RandTerm(
         func=mdp.reset_root_state_rover,
         mode="reset",
@@ -231,7 +232,7 @@ class RoverEnvCfg(RLTaskEnvCfg):
 
     # Create scene
     scene: RoverSceneCfg = RoverSceneCfg(
-        num_envs=256, env_spacing=4.0, replicate_physics=False)
+        num_envs=256, env_spacing=1.0, replicate_physics=False)
 
     # Setup PhysX Settings
     sim: SimCfg = SimCfg(
@@ -257,7 +258,7 @@ class RoverEnvCfg(RLTaskEnvCfg):
     # Basic Settings
     observations: ObservationCfg = ObservationCfg()
     actions: ActionsCfg = ActionsCfg()
-    randomization: RandomizationCfg = RandomizationCfg()
+    #randomization: RandomizationCfg = RandomizationCfg()
 
     # MDP Settings
     rewards: RewardsCfg = RewardsCfg()

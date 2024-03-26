@@ -10,11 +10,7 @@ from omni.isaac.orbit.assets import ArticulationCfg
 
 @configclass
 class ExoMyEnvCfg(RoverEnvCfg):
-<<<<<<< HEAD
-    """Configuration for the Exomy rover environment."""
-=======
     """Configuration for the ExoMy rover environment."""
->>>>>>> 7bd659d1e1a40fb8e26d5d47aa68ab6aa7ded6c1
 
     def __post_init__(self):
         super().__post_init__()

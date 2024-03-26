@@ -384,7 +384,6 @@ class TerrainManager():
         spawn_locations[:, 1] = spawn_locations[:, 1] * self.resolution_in_m + self._heightmap_manager.min_y
         return spawn_locations
 
-
 def show_heightmap(heightmap, cmap="terrain"):
     plt.figure(figsize=(10, 10))
     vmin = np.min(heightmap)
@@ -414,7 +413,6 @@ def show_heightmap(heightmap, cmap="terrain"):
 
     # Show the plot
     plt.show()
-
 
 def visualize_spawn_points(spawn_locations: np.ndarray, heightmap: np.ndarray):
     """
@@ -458,6 +456,193 @@ def visualize_spawn_points(spawn_locations: np.ndarray, heightmap: np.ndarray):
 
     plt.show()
 
+class ExomyTerrainManager():
+
+    def __init__(self, num_envs: int, device: str):
+        self.dir_path = os.path.dirname(os.path.realpath(__file__))
+        #terrain_path = os.path.join(self.dir_path, "../terrain_data/map.ply")
+        #rock_mesh_path = os.path.join(self.dir_path, "../terrain_data/big_stones.ply")
+        terrain_path = "/World/terrain/terrain/EzGezV2ExtraLarge/Terrain_v1/Body6"
+        markers_path = "/World/terrain/terrain/obstacles/"
+
+        # Temporary kinda scuffed solution for this specific training area
+        # ideally, these positions should be fetched from the USD instead but im lazy
+        self.marker_positions = [
+            (345,875),
+            (514,704),
+            (502,73),
+            (226,230),
+            (141,618)
+        ]
+
+        self.meshes = [terrain_path, markers_path]
+
+        self.meshes = {
+            "terrain": terrain_path,
+            "markers": markers_path
+        }
+
+        # Terrain Parameters
+        self.heightmap = None
+        self.resolution_in_cm = 1
+
+        # Load Terrain
+        print("Getting triangles and vertices from USD file")
+        vertices, faces = self.get_mesh(self.meshes["terrain"])
+        print("Generating heightmap")
+        self._heightmap_manager = HeightmapManager(self.resolution_in_cm, vertices, faces)
+
+
+        self.safe_marker_mask = self.getMarkerMask(heightmap=self._heightmap_manager.heightmap, marker_positions=self.marker_positions)
+
+        # Generate Spawn Locations
+        self.spawn_locations = self.random_rover_spawns(
+            marker_mask=self.safe_marker_mask, heightmap=self._heightmap_manager.heightmap, n_spawns=num_envs*2, seed=41, )
+        if device == 'cuda:0':
+            self.spawn_locations = torch.from_numpy(self.spawn_locations).cuda()
+            self.rock_mask_tensor = torch.from_numpy(self.safe_marker_mask).cuda().unsqueeze(-1)
+    
+    def getMarkerMask(self, heightmap, marker_positions):
+        import cv2
+        from scipy import ndimage
+
+        # Initialize a rock mask with zeros
+        marker_mask = np.zeros_like(heightmap, dtype=np.int32)
+        print(f"Dimensions: {marker_mask.shape}-------------------------------")
+
+        for pos in marker_positions:
+            # Adjust for origin position in the middle
+            marker_mask[pos[0],pos[1]] = 1
+
+
+        # Perform dilation to add a safety margin around the rocks
+        kernel = np.ones((3, 3), np.uint8)
+        marker_mask = cv2.morphologyEx(marker_mask.astype(np.uint8), cv2.MORPH_CLOSE, kernel)
+
+        # = cv2.morphologyEx(rock_mask.astype(np.uint8), cv2.MORPH_OPEN, kernel)
+
+        # # Perform dilation to add a safety margin around the rocks
+        # closed_rock_mask = binary_dilation(rock_mask, iterations=1)
+        # filled_rock_mask = ndimage.binary_fill_holes(closed_rock_mask).astype(int)
+        marker_mask = ndimage.binary_fill_holes(marker_mask).astype(int)
+
+        kernel = np.ones((7, 7), np.uint8)
+        marker_mask = cv2.morphologyEx(marker_mask.astype(np.uint8), cv2.MORPH_OPEN, kernel)
+        kernel = np.ones((11, 11), np.uint8)
+        marker_mask = cv2.dilate(marker_mask.astype(np.uint8), kernel, iterations=1)
+        # # Safety margin around the rocks
+        #kernel = np.ones((42, 42), np.uint8)
+        #safe_rock_mask = cv2.dilate(marker_mask.astype(np.uint8), kernel, iterations=1)
+
+        return marker_mask
+
+    def check_if_target_is_valid(
+            self,
+            env_ids: torch.Tensor,
+            target_positions: torch.Tensor,
+            device: str = "cuda:0"
+    ) -> torch.Tensor:
+        # Find the grid cell in self.heightmap_tensor
+
+        # Scale the position to match the heightmap indices
+        scaled_position = target_positions[:, 0:2] / \
+            self._heightmap_manager.resolution_in_m + self._heightmap_manager.offset_tensor
+        # Convert to long to get the grid cell
+        grid_cell = scaled_position.long()
+
+        # Clamp the grid cell to the heightmap dimensions
+        grid_cell[:, 0] = torch.clamp(grid_cell[:, 0], 0, self._heightmap_manager.heightmap_tensor.shape[1]-1)
+        grid_cell[:, 1] = torch.clamp(grid_cell[:, 1], 0, self._heightmap_manager.heightmap_tensor.shape[0]-1)
+
+        reset_buf = torch.where(self.rock_mask_tensor[grid_cell[:, 1], grid_cell[:, 0]] == 1, 1, 0).squeeze(-1)
+        env_ids = env_ids[reset_buf == 1]
+        reset_buf_len = len(env_ids)
+        return env_ids, reset_buf_len
+    
+    def get_mesh(self, prim_path="/") -> Tuple[np.ndarray, np.ndarray]:
+        """ This function reads a USD from the specified prim path and return vertices and faces.
+
+        """
+
+        # Assert that the specified path exists in the list of meshes.
+        # assert path in self.meshes, f"The provided path '{path}' must exist in the 'self.meshes' list."
+
+        # Get faces and vertices from the mesh using the provided prim path
+        faces, vertices = get_triangles_and_vertices_from_prim(prim_path)
+
+        # Create pymeshlab mesh and meshset
+        mesh = pymeshlab.Mesh(vertices, faces)
+
+        ms = pymeshlab.MeshSet()
+        ms.add_mesh(mesh)
+
+        # get the mesh
+        mesh = ms.current_mesh()  # get the mesh
+
+        # Get vertices as float32 array
+        vertices = mesh.vertex_matrix().astype('float32')
+
+        # Get faces as uint32 array
+        faces = mesh.face_matrix().astype('uint32')
+
+        return vertices, faces
+
+    def random_rover_spawns(
+            self,
+            marker_mask: np.ndarray,
+            heightmap, n_spawns: int = 100,
+            border_offset: float = 20.0,
+            seed=None
+    ) -> np.ndarray:
+        """Generate random rover spawn locations. Calculates random x,y checks if it is a marker, if not,
+        add to list of spawn locations with corresponding z value from heightmap.
+
+        Args:
+            marker_mask (np.ndarray): A binary mask indicating the locations of markers and a little extra room.
+            n_spawns (int, optional): The number of spawn locations to generate. Defaults to 1.
+            min_dist (float, optional): The minimum distance between two spawn locations. Defaults to 1.0.
+
+        Returns:
+            np.ndarray: An array of shape (n_spawns, 3) containing the spawn locations.
+        """
+        # max_xy = int(max_xy / self.resolution_in_m)
+        # min_xy = int(min_xy / self.resolution_in_m)
+
+        # Set the random seed if provided
+        if seed is not None:
+            np.random.seed(seed)
+
+        # Get the heightmap dimensions
+        height, width = marker_mask.shape
+        min_xy = int(border_offset / self.resolution_in_cm)
+        max_xy = int((min(height, width) - min_xy))
+
+        assert max_xy < width, f"max_xy ({max_xy}) must be less than width ({width})"
+        assert max_xy < height, f"max_xy ({max_xy}) must be less than height ({height})"
+
+        # Initialize the spawn locations array
+        spawn_locations = np.zeros((n_spawns, 3), dtype=np.float32)
+
+        # Generate spawn locations
+        for i in range(n_spawns):
+
+            valid_location = False
+            while not valid_location:
+                # Generate a random x and y
+                x = np.random.randint(min_xy, max_xy)
+                y = np.random.randint(min_xy, max_xy)
+
+                # Check if the location is too close to a previous location
+                if marker_mask[y, x] == 0:
+                    valid_location = True
+                    spawn_locations[i, 0] = x
+                    spawn_locations[i, 1] = y
+                    spawn_locations[i, 2] = heightmap[y, x]
+
+        # Scale and offset the spawn locations
+        spawn_locations[:, 0] = spawn_locations[:, 0] * self.resolution_in_cm + self._heightmap_manager.min_x
+        spawn_locations[:, 1] = spawn_locations[:, 1] * self.resolution_in_cm + self._heightmap_manager.min_y
+        return spawn_locations
 
 if __name__ == "__main__":
     terrain = TerrainManager(device='cuda:0')

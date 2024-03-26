@@ -101,24 +101,24 @@ class ObservationCfg:
     @configclass
     class PolicyCfg(ObsGroup):
         actions = ObsTerm(func=mdp.last_action)
-        #distance = ObsTerm(func=mdp.distance_to_target_euclidean, params={
-        #                   "command_name": "target_pose"}, scale=0.11)
-    #    heading = ObsTerm(
-    #        func=mdp.angle_to_target_observation,
-    #        params={
-    #            "command_name": "target_pose",
-    #        },
-    #        scale=1 / math.pi,
-    #    )
+        distance = ObsTerm(func=mdp.distance_to_target_euclidean, params={
+                           "command_name": "target_pose"}, scale=0.11)
+        heading = ObsTerm(
+            func=mdp.angle_to_target_observation,
+            params={
+                "command_name": "target_pose",
+            },
+            scale=1 / math.pi,
+        )
     #    height_scan = ObsTerm(
     #        func=mdp.height_scan_rover,
     #        scale=1,
     #        params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
     #    )
 #
-    #    def __post_init__(self):
-    #        self.enable_corruption = True
-    #        self.concatenate_terms = True
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
 
@@ -136,32 +136,32 @@ class RewardsCfg:
         weight=5.0,
         params={"command_name": "target_pose"},
     )
-    #reached_target = RewTerm(
-    #    func=mdp.reached_target,
-    #    weight=5.0,
-    #    params={"command_name": "target_pose", "threshold": 0.18},
-    #)
-    #angle_to_target = RewTerm(
-    #    func=mdp.angle_to_target_penalty,
-    #    weight=-1.5,
-    #    params={"command_name": "target_pose"},
-    #)
-    #heading_soft_contraint = RewTerm(
-    #    func=mdp.heading_soft_contraint,
-    #    weight=-0.5,
-    #    params={"asset_cfg": SceneEntityCfg(name="robot")},
-    #)
+    reached_target = RewTerm(
+        func=mdp.reached_target,
+        weight=5.0,
+        params={"command_name": "target_pose", "threshold": 0.18},
+    )
+    angle_to_target = RewTerm(
+        func=mdp.angle_to_target_penalty,
+        weight=-1.5,
+        params={"command_name": "target_pose"},
+    )
+    heading_soft_contraint = RewTerm(
+        func=mdp.heading_soft_contraint,
+        weight=-0.5,
+        params={"asset_cfg": SceneEntityCfg(name="robot")},
+    )
     #collision = RewTerm(
     #    func=mdp.collision_penalty,
     #    weight=-2.0,
     #    params={"sensor_cfg": SceneEntityCfg(
     #        "contact_sensor"), "threshold": 1.0},
     #)
-    #far_from_target = RewTerm(
-    #    func=mdp.far_from_target_reward,
-    #    weight=-2.0,
-    #    params={"command_name": "target_pose", "threshold": 11.0},
-    #)
+    far_from_target = RewTerm(
+        func=mdp.far_from_target_reward,
+        weight=-2.0,
+        params={"command_name": "target_pose", "threshold": 11.0},
+    )
 
 
 @configclass
@@ -169,14 +169,14 @@ class TerminationsCfg:
     """Termination conditions for the task."""
 
     time_limit = DoneTerm(func=mdp.time_out, time_out=True)
-    #is_success = DoneTerm(
-    #    func=mdp.is_success,
-    #    params={"command_name": "target_pose", "threshold": 0.18},
-    #)
-    #far_from_target = DoneTerm(
-    #    func=mdp.far_from_target,
-    #    params={"command_name": "target_pose", "threshold": 11.0},
-    #)
+    is_success = DoneTerm(
+        func=mdp.is_success,
+        params={"command_name": "target_pose", "threshold": 0.18},
+    )
+    far_from_target = DoneTerm(
+        func=mdp.far_from_target,
+        params={"command_name": "target_pose", "threshold": 11.0},
+    )
     #collision = DoneTerm(
     #    func=mdp.collision_with_obstacles,
     #    params={"sensor_cfg": SceneEntityCfg(
@@ -220,10 +220,10 @@ class RandomizationCfg:
     )
 
 
-# @configclass
-# class CurriculumCfg:
-#     """ Curriculum configuration for the task. """
-#     target_distance = CurrTerm(func=mdp.goal_distance_curriculum)
+#@configclass
+#class CurriculumCfg:
+#    """ Curriculum configuration for the task. """
+#    target_distance = CurrTerm(func=mdp.goal_distance_curriculum)
 
 
 @configclass
@@ -264,7 +264,7 @@ class RoverEnvCfg(RLTaskEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
     commands: CommandsCfg = CommandsCfg()
-    # curriculum: CurriculumCfg = CurriculumCfg()
+    #curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         self.sim.dt = 1 / 30.0

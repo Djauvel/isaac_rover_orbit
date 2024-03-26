@@ -13,7 +13,7 @@ from omni.isaac.orbit.terrains import TerrainImporter, TerrainImporterCfg
 from omni.isaac.orbit.utils.math import quat_rotate_inverse, wrap_to_pi, yaw_quat
 
 from .terrain_utils import TerrainManager
-
+from .terrain_utils import ExomyTerrainManager
 
 # TODO: THIS IS A TEMPORARY FIX, since terrain based command is changed in the Orbit API
 class TerrainBasedPositionCommand(CommandTerm):
@@ -187,10 +187,10 @@ class ExomyTerrainImporter(TerrainImporter):
     def __init__(self, cfg: TerrainImporterCfg):
         super().__init__(cfg)
         self._cfg = cfg
-        self._terrainManager = TerrainManager(num_envs=self._cfg.num_envs, device=self.device)
+        self._terrainManager = ExomyTerrainManager(num_envs=self._cfg.num_envs, device=self.device)
         # Specifying the bounds of the area where we want to generate waypoints [low_bound,high_bound] in meters
-        self.x_bound = [-3,3]
-        self.y_bound = [-5,5]
+        self.x_bound = [-300,300]
+        self.y_bound = [-500,500]
 
     def sample_new_targets(self, env_ids):
         # We need to keep track of the original env_ids, because we need to resample some of them
@@ -220,7 +220,7 @@ class ExomyTerrainImporter(TerrainImporter):
     def generate_random_targets(self, env_ids, target_position):
         """
         This function generates random targets for the rover to navigate to.
-        The targets are generated in a circle around the environment origin.
+        The targets are generated in a rectangle around the environment origin.
 
         Args:
             env_ids: The ids of the environments for which we need to generate targets.

@@ -69,11 +69,15 @@ class RoverSceneCfg(ExoMyTerrainSceneCfg):
     # AAU_ROVER_SIMPLE_CFG.replace(
     #     prim_path="{ENV_REGEX_NS}/Robot")
 
-    #contact_sensor = ContactSensorCfg(
-    #    prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
-    #    filter_prim_paths_expr=["/World/terrain/terrain/obstacles/"],
-    #)
-    contact_sensor = None
+    contact_sensor = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
+        filter_prim_paths_expr=["/World/terrain/terrain/obstacles/ArUcoMarker1/imagetostl_mesh0",
+                                "/World/terrain/terrain/obstacles/ArUcoMarker2/imagetostl_mesh0",
+                                "/World/terrain/terrain/obstacles/ArUcoMarker3/imagetostl_mesh0",
+                                "/World/terrain/terrain/obstacles/ArUcoMarker4/imagetostl_mesh0",
+                                "/World/terrain/terrain/obstacles/ArUcoMarker5/imagetostl_mesh0"],
+    )
+    #contact_sensor = None
 
     height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/Body",
@@ -151,12 +155,12 @@ class RewardsCfg:
         weight=-0.5,
         params={"asset_cfg": SceneEntityCfg(name="robot")},
     )
-    #collision = RewTerm(
-    #    func=mdp.collision_penalty,
-    #    weight=-2.0,
-    #    params={"sensor_cfg": SceneEntityCfg(
-    #        "contact_sensor"), "threshold": 1.0},
-    #)
+    collision = RewTerm(
+        func=mdp.collision_penalty,
+        weight=-2.0,
+        params={"sensor_cfg": SceneEntityCfg(
+            "contact_sensor"), "threshold": 1.0},
+    )
     far_from_target = RewTerm(
         func=mdp.far_from_target_reward,
         weight=-2.0,
@@ -177,11 +181,11 @@ class TerminationsCfg:
         func=mdp.far_from_target,
         params={"command_name": "target_pose", "threshold": 11.0},
     )
-    #collision = DoneTerm(
-    #    func=mdp.collision_with_obstacles,
-    #    params={"sensor_cfg": SceneEntityCfg(
-    #        "contact_sensor"), "threshold": 1.0},
-    #)
+    collision = DoneTerm(
+        func=mdp.collision_with_obstacles,
+        params={"sensor_cfg": SceneEntityCfg(
+            "contact_sensor"), "threshold": 1.0},
+    )
 
 
 # "mdp.illegal_contact

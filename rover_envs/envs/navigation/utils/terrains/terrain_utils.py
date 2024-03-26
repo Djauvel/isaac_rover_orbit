@@ -508,10 +508,10 @@ class ExomyTerrainManager():
 
         # Initialize a rock mask with zeros
         marker_mask = np.zeros_like(heightmap, dtype=np.int32)
-        print(f"Dimensions: {marker_mask.shape}-------------------------------")
+        #print(f"Dimensions: {marker_mask.shape}-------------------------------")
 
+        # mark all marker locations in the environment
         for pos in marker_positions:
-            # Adjust for origin position in the middle
             marker_mask[pos[0],pos[1]] = 1
 
 

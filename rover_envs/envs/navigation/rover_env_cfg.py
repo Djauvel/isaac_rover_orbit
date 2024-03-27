@@ -32,6 +32,19 @@ from rover_envs.envs.navigation.utils.terrains.commands_cfg import TerrainBasedP
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import RoverTerrainImporter  # noqa: F401
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBasedPositionCommand  # noqa: F401
 
+# These positions have been adjusted with -300 and -500 respectively
+# All positions are in cm, might have to readjust
+marker_positions = [
+            (.45,3.75,0.0),
+            (2.14,2.04,0.0),
+            (2.02,-4.27,0.0),
+            (-.74,-2.70,0.0)
+        ]
+
+danger_position = [
+            (-1.59,1.18,0.0)
+        ]
+
 ##
 # Scene Description
 ##
@@ -114,6 +127,41 @@ class ObservationCfg:
             },
             scale=1 / math.pi,
         )
+        marker1 = ObsTerm(
+            func=mdp.dist_to_marker,
+            params={
+                "marker_position": marker_positions[0],
+            },
+            scale=1
+        )
+        marker2 = ObsTerm(
+            func=mdp.dist_to_marker,
+            params={
+                "marker_position": marker_positions[1],
+            },
+            scale=1
+        )
+        marker3 = ObsTerm(
+            func=mdp.dist_to_marker,
+            params={
+                "marker_position": marker_positions[2],
+            },
+            scale=1
+        )
+        marker4 = ObsTerm(
+            func=mdp.dist_to_marker,
+            params={
+                "marker_position": marker_positions[3],
+            },
+            scale=1
+        )
+        danger = ObsTerm(
+            func=mdp.dist_to_marker,
+            params={
+                "marker_position": danger_position[0],
+            },
+            scale=1
+        )
     #    height_scan = ObsTerm(
     #        func=mdp.height_scan_rover,
     #        scale=1,
@@ -143,7 +191,7 @@ class RewardsCfg:
     reached_target = RewTerm(
         func=mdp.reached_target,
         weight=5.0,
-        params={"command_name": "target_pose", "threshold": 0.18},
+        params={"command_name": "target_pose", "threshold": 0.10}, # 10 cm from target is considered reached
     )
     angle_to_target = RewTerm(
         func=mdp.angle_to_target_penalty,
@@ -164,9 +212,30 @@ class RewardsCfg:
     far_from_target = RewTerm(
         func=mdp.far_from_target_reward,
         weight=-2.0,
-        params={"command_name": "target_pose", "threshold": 11.0},
+        params={"command_name": "target_pose", "threshold": 11.0}, #Cm eller meter????
     )
-
+    # Penalties for ERC specifically
+    close_to_danger = RewTerm(
+        func=mdp.danger_landmark_penalty,
+        weight=-2.0,
+        params={"threshold": 0.50,
+                "marker_position": danger_position[0]},
+    )
+    time_penalty = RewTerm(
+        func=mdp.time_penalty,
+        weight=-1.0,
+        params={
+            "time_penalty" : 0.1
+        }
+    )
+    # Todo: Finish this
+    #life_length_penalty = RewTerm(
+    #    func=,
+    #    weight=-1.0,
+    #    params={
+    #
+    #    },
+    #)
 
 @configclass
 class TerminationsCfg:
@@ -236,7 +305,7 @@ class RoverEnvCfg(RLTaskEnvCfg):
 
     # Create scene
     scene: RoverSceneCfg = RoverSceneCfg(
-        num_envs=256, env_spacing=1.0, replicate_physics=False)
+        num_envs=256, env_spacing=0.0, replicate_physics=False)
 
     # Setup PhysX Settings
     sim: SimCfg = SimCfg(

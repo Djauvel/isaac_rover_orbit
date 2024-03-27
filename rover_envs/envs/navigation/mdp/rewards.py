@@ -6,6 +6,7 @@ import torch
 # Importing necessary modules from the omni.isaac.orbit package
 from omni.isaac.orbit.managers import SceneEntityCfg
 from omni.isaac.orbit.sensors import ContactSensor
+from omni.isaac.orbit.assets import RigidObject
 
 if TYPE_CHECKING:
     from omni.isaac.orbit.envs import RLTaskEnv
@@ -135,3 +136,25 @@ def far_from_target_reward(env: RLTaskEnv, command_name: str, threshold: float) 
     distance = torch.norm(target_position, p=2, dim=-1)
 
     return torch.where(distance > threshold, 1.0, 0.0)
+
+
+# ERC specific rewards and penalties 
+def danger_landmark_penalty(env: RLTaskEnv, threshold: float, marker_position) -> torch.Tensor:
+    """
+    Gives a penalty if the rover comes too close to a danger landmark
+    """
+    
+    rover_asset: RigidObject = env.scene["robot"]
+    rover_position = rover_asset.data.root_state_w[:, :3]
+
+    marker_position_tensor = torch.tensor(marker_position, dtype=torch.float32, device=rover_position.device)
+
+    # Calculate distance
+    distance: torch.Tensor = torch.norm(marker_position_tensor - rover_position, p=2, dim=-1)
+    
+    return torch.where(distance < threshold, 1.0, 0.0)
+
+def time_penalty(env: RLTaskEnv, time_penalty : float) -> torch.Tensor:
+    """Reward function for the reinforcement learning task"""
+    # Apply time penalty
+    return torch.tensor(time_penalty, dtype=torch.float32)

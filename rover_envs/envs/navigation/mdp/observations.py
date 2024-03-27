@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import torch
 from omni.isaac.orbit.managers import SceneEntityCfg
 from omni.isaac.orbit.sensors import RayCaster
+from omni.isaac.orbit.assets import RigidObject
 
 # from omni.isaac.orbit.command_generators import UniformPoseCommandGenerator
 
@@ -43,3 +44,19 @@ def height_scan_rover(env: RLTaskEnv, sensor_cfg: SceneEntityCfg) -> torch.Tenso
     # height scan: height = sensor_height - hit_point_z - 0.26878
     # Note: 0.26878 is the distance between the sensor and the rover's base
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
+
+
+def dist_to_marker(env: RLTaskEnv, marker_position) -> torch.Tensor:
+    """Calculate the distance to the ArUco Markers in the environment 
+
+        This function uses the array of marker positions to determine and return the distance to any given marker
+    """
+    rover_asset: RigidObject = env.scene["robot"]
+    rover_position = rover_asset.data.root_state_w[:, :3]
+
+    marker_position_tensor = torch.tensor(marker_position, dtype=torch.float32, device=rover_position.device)
+
+    # Calculate distance
+    distance: torch.Tensor = torch.norm(marker_position_tensor - rover_position, p=2, dim=-1)
+
+    return distance.unsqueeze(-1)

@@ -514,10 +514,10 @@ class ExomyTerrainManager():
         for pos in marker_positions:
             marker_mask[pos[0],pos[1]] = 1
 
-
+        
         # Perform dilation to add a safety margin around the rocks
         kernel = np.ones((3, 3), np.uint8)
-        marker_mask = cv2.morphologyEx(marker_mask.astype(np.uint8), cv2.MORPH_CLOSE, kernel)
+        marker_mask = cv2.morphologyEx(marker_mask.astype(np.uint8), cv2.MORPH_DILATE, kernel)
 
         # = cv2.morphologyEx(rock_mask.astype(np.uint8), cv2.MORPH_OPEN, kernel)
 
@@ -527,13 +527,13 @@ class ExomyTerrainManager():
         marker_mask = ndimage.binary_fill_holes(marker_mask).astype(int)
 
         kernel = np.ones((7, 7), np.uint8)
-        marker_mask = cv2.morphologyEx(marker_mask.astype(np.uint8), cv2.MORPH_OPEN, kernel)
-        kernel = np.ones((11, 11), np.uint8)
+        marker_mask = cv2.morphologyEx(marker_mask.astype(np.uint8), cv2.MORPH_DILATE, kernel)
+        kernel = np.ones((10, 10), np.uint8)
         marker_mask = cv2.dilate(marker_mask.astype(np.uint8), kernel, iterations=1)
         # # Safety margin around the rocks
         #kernel = np.ones((42, 42), np.uint8)
         #safe_rock_mask = cv2.dilate(marker_mask.astype(np.uint8), kernel, iterations=1)
-
+        
         return marker_mask
 
     def check_if_target_is_valid(

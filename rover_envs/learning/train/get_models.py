@@ -1,4 +1,4 @@
-
+from torch.nn import ReLU
 from gymnasium.spaces.box import Box
 from omni.isaac.orbit.envs import RLTaskEnv
 
@@ -21,7 +21,7 @@ def get_models(agent: str, env: RLTaskEnv, observation_space: Box, action_space:
     """
 
     if agent == "PPO":
-        return get_model_gaussian(env, observation_space, action_space)
+        return get_model_gaussian_ERC(env, observation_space, action_space)
     if agent == "TRPO":
         return get_model_gaussian(env, observation_space, action_space)
     if agent == "RPO":
@@ -33,6 +33,35 @@ def get_models(agent: str, env: RLTaskEnv, observation_space: Box, action_space:
 
     raise ValueError(f"Agent {agent} not supported.")
 
+def get_model_gaussian_ERC(env: RLTaskEnv, observation_space: Box, action_space: Box):
+    models = {}
+    encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+
+    mlp_input_size = 8
+
+    models["policy"] = GaussianNeuralNetwork(
+        observation_space=observation_space,
+        action_space=action_space,
+        device=env.device,
+        mlp_input_size=mlp_input_size,
+        mlp_layers=[256, 128, 64],  # Specify the number of neurons in each MLP layer
+        mlp_activation="leaky_relu",  # Specify the activation function, e.g., ReLU
+        encoder_input_size=encoder_input_size,
+        encoder_layers=[80, 60],
+        encoder_activation="leaky_relu",  # Specify the activation function for encoder layers
+    )
+    models["value"] = DeterministicNeuralNetwork(
+        observation_space=observation_space,
+        action_space=action_space,
+        device=env.device,
+        mlp_input_size=mlp_input_size,
+        mlp_layers=[256,128, 64],  # Specify the number of neurons in each MLP layer
+        mlp_activation="leaky_relu",  # Specify the activation function, e.g., ReLU
+        encoder_input_size=encoder_input_size,
+        encoder_layers=[80, 60],
+        encoder_activation="leaky_relu",  # Specify the activation function for encoder layers
+    )
+    return models
 
 def get_model_gaussian(env: RLTaskEnv, observation_space: Box, action_space: Box):
     models = {}
@@ -63,7 +92,6 @@ def get_model_gaussian(env: RLTaskEnv, observation_space: Box, action_space: Box
         encoder_activation="leaky_relu",
     )
     return models
-
 
 def get_model_double_critic_deterministic(env: RLTaskEnv, observation_space: Box, action_space: Box):
     models = {}

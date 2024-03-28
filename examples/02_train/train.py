@@ -104,7 +104,7 @@ def video_record(env: RLTaskEnv, log_dir: str, video: bool, video_length: int, v
 from omni.isaac.orbit_tasks.utils import parse_env_cfg  # noqa: E402
 from skrl.utils import set_seed  # noqa: E402
 
-import rover_envs.envs.navigation.robots  # noqa: E402, F401
+import rover_envs.envs.navigation.robots.aau_rover  # noqa: E402, F401
 # Import agents
 from rover_envs.learning.train import get_agent  # noqa: E402
 from rover_envs.utils.config import parse_skrl_cfg  # noqa: E402
@@ -130,6 +130,7 @@ def train():
     # Get the observation and action spaces
     num_obs = env.observation_manager.group_obs_dim["policy"][0]
     num_actions = env.action_manager.action_term_dim[0]
+    
     observation_space = gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs,))
     action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(num_actions,))
 

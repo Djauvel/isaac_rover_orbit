@@ -228,14 +228,7 @@ class RewardsCfg:
             "time_penalty" : 0.1
         }
     )
-    # Todo: Finish this
-    #life_length_penalty = RewTerm(
-    #    func=,
-    #    weight=-1.0,
-    #    params={
-    #
-    #    },
-    #)
+
 
 @configclass
 class TerminationsCfg:

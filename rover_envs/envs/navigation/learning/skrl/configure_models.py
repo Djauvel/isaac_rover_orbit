@@ -1,7 +1,7 @@
 
 from gymnasium.spaces.box import Box
 from omni.isaac.orbit.envs import RLTaskEnv
-
+from rover_envs.envs.navigation.rover_env_cfg import ObservationCfg
 from rover_envs.envs.navigation.learning.skrl.models import (Critic, DeterministicActor, DeterministicNeuralNetwork,
                                                              GaussianNeuralNetwork)
 
@@ -46,8 +46,10 @@ def gaussian_model_skrl(env: RLTaskEnv, observation_space: Box, action_space: Bo
         device=env.device,
         mlp_input_size=mlp_input_size,
         mlp_layers=[256, 160, 128],
+        #mlp_layers=[512, 320, 256],
         mlp_activation="leaky_relu",
         encoder_input_size=encoder_input_size,
+        #encoder_layers=[160, 120],
         encoder_layers=[80, 60],
         encoder_activation="leaky_relu",
     )
@@ -57,9 +59,11 @@ def gaussian_model_skrl(env: RLTaskEnv, observation_space: Box, action_space: Bo
         device=env.device,
         mlp_input_size=mlp_input_size,
         mlp_layers=[256, 160, 128],
+        #mlp_layers=[512, 320, 256],
         mlp_activation="leaky_relu",
         encoder_input_size=encoder_input_size,
         encoder_layers=[80, 60],
+        #encoder_layers=[160, 120],
         encoder_activation="leaky_relu",
     )
     return models

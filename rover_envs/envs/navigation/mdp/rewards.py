@@ -135,6 +135,8 @@ def far_from_target_reward(env: RLTaskEnv, command_name: str, threshold: float) 
 
     distance = torch.norm(target_position, p=2, dim=-1)
 
+    #print(f"Distance to target: {distance}")
+
     return torch.where(distance > threshold, 1.0, 0.0)
 
 
@@ -151,10 +153,19 @@ def danger_landmark_penalty(env: RLTaskEnv, threshold: float, marker_position) -
 
     # Calculate distance
     distance: torch.Tensor = torch.norm(marker_position_tensor - rover_position, p=2, dim=-1)
-    
+    #print(f"Distance to Danger: {distance}")
     return torch.where(distance < threshold, 1.0, 0.0)
 
 def time_penalty(env: RLTaskEnv, time_penalty : float) -> torch.Tensor:
     """Reward function for the reinforcement learning task"""
     # Apply time penalty
     return torch.tensor(time_penalty, dtype=torch.float32)
+
+def falling_penalty(env: RLTaskEnv, threshold : float):
+    """
+    Checks whether the rover has fallen off the environment :P
+    """
+    rover_asset: RigidObject = env.scene["robot"]
+    linvel = rover_asset.data.root_state_w[:, 7:10]
+
+    return torch.where(linvel[:,2] < threshold, 1.0, 0.0)

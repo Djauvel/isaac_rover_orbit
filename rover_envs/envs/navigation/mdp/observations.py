@@ -59,4 +59,6 @@ def dist_to_marker(env: RLTaskEnv, marker_position) -> torch.Tensor:
     # Calculate distance
     distance: torch.Tensor = torch.norm(marker_position_tensor - rover_position, p=2, dim=-1)
 
+    #print(f"Distance to marker: {distance}")
+
     return distance.unsqueeze(-1)

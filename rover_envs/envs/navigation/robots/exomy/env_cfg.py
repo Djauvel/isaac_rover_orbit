@@ -30,8 +30,8 @@ class ExoMyEnvCfg(RoverEnvCfg):
             drive_joint_names=[".*Drive_Joint"],
         )
     
-        self.scene.robot.init_state = ArticulationCfg.InitialStateCfg(
-            pos=(0.0, 0.0, 0.5),
-            joint_pos={".*Steer_Joint": 0.0},
-            joint_vel={".*Steer_Joint": 0.0, ".*Drive_Joint": 0.0},
-        )
+        #self.scene.robot.init_state = ArticulationCfg.InitialStateCfg(
+        #    pos=(0.0, 0.0, 0.5),
+        #    joint_pos={".*Steer_Joint": 0.0},
+        #    joint_vel={".*Steer_Joint": 0.0, ".*Drive_Joint": 0.0},
+        #)

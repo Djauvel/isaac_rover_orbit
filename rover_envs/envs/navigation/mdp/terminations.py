@@ -6,6 +6,8 @@ import torch
 # Importing necessary modules from the omni.isaac.orbit package
 from omni.isaac.orbit.managers import SceneEntityCfg
 from omni.isaac.orbit.sensors import ContactSensor
+from omni.isaac.orbit.assets import RigidObject
+from omni.isaac.orbit.utils.math import euler_xyz_from_quat
 
 if TYPE_CHECKING:
     from omni.isaac.orbit.envs import RLTaskEnv
@@ -62,3 +64,16 @@ def collision_with_obstacles(env: RLTaskEnv, sensor_cfg: SceneEntityCfg, thresho
     forces_active = torch.sum(normalized_forces, dim=-1) > 1
 
     return torch.where(forces_active, True, False)
+
+
+def falling(env: RLTaskEnv, low_bound : float, high_bound):
+    """
+    Checks whether the rover has fallen off the environment :P
+    """
+    rover_asset: RigidObject = env.scene["robot"]
+    roll, pitch, yaw = euler_xyz_from_quat(rover_asset.data.root_state_w[:, 3:7])
+    # If the physics timestep is too early, disregard, else, check for falling
+
+    return torch.where(low_bound < roll < high_bound |
+                       low_bound < pitch < high_bound |
+                       low_bound < yaw < high_bound, True, False)

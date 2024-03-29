@@ -22,7 +22,7 @@ from omni.isaac.orbit.sim import SimulationCfg as SimCfg
 from omni.isaac.orbit.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
 from omni.isaac.orbit.utils import configclass
 from omni.isaac.orbit.utils.noise import AdditiveUniformNoiseCfg as Unoise  # noqa: F401
-
+import torch
 import rover_envs.envs.navigation.mdp as mdp
 from rover_envs.assets.terrains.debug.debug_terrains import DebugTerrainSceneCfg  # noqa: F401
 from rover_envs.assets.terrains.mars import MarsTerrainSceneCfg  # noqa: F401
@@ -212,7 +212,7 @@ class RewardsCfg:
     far_from_target = RewTerm(
         func=mdp.far_from_target_reward,
         weight=-2.0,
-        params={"command_name": "target_pose", "threshold": 11.0}, #Cm eller meter????
+        params={"command_name": "target_pose", "threshold": 10.0}, #meter????
     )
     # Penalties for ERC specifically
     close_to_danger = RewTerm(
@@ -225,10 +225,16 @@ class RewardsCfg:
         func=mdp.time_penalty,
         weight=-1.0,
         params={
-            "time_penalty" : 0.1
+            "time_penalty" : 0.05
         }
     )
-
+    fell_off = RewTerm(
+        func=mdp.falling_penalty,
+        weight=-2.0,
+        params={
+            "threshold" : -1.5
+        },
+    )
 
 @configclass
 class TerminationsCfg:
@@ -237,17 +243,22 @@ class TerminationsCfg:
     time_limit = DoneTerm(func=mdp.time_out, time_out=True)
     is_success = DoneTerm(
         func=mdp.is_success,
-        params={"command_name": "target_pose", "threshold": 0.18},
+        params={"command_name": "target_pose", "threshold": 0.18}, #distance to target for success
     )
     far_from_target = DoneTerm(
         func=mdp.far_from_target,
-        params={"command_name": "target_pose", "threshold": 11.0},
+        params={"command_name": "target_pose", "threshold": 10.0}, # Kinda obsolete for ERC env
     )
     collision = DoneTerm(
         func=mdp.collision_with_obstacles,
         params={"sensor_cfg": SceneEntityCfg(
             "contact_sensor"), "threshold": 1.0},
     )
+    #fell_off = DoneTerm(
+    #    func=mdp.falling,
+    #    params={"low_bound" : torch.pi/2,
+    #            "high_bound": 2*torch.pi-torch.pi/2},
+    #)
 
 
 # "mdp.illegal_contact
@@ -324,7 +335,7 @@ class RoverEnvCfg(RLTaskEnvCfg):
     # Basic Settings
     observations: ObservationCfg = ObservationCfg()
     actions: ActionsCfg = ActionsCfg()
-    #randomization: RandomizationCfg = RandomizationCfg()
+    randomization: RandomizationCfg = RandomizationCfg()
 
     # MDP Settings
     rewards: RewardsCfg = RewardsCfg()

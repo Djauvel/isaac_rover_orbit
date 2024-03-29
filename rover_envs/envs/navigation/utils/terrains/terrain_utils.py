@@ -614,11 +614,14 @@ class ExomyTerrainManager():
 
         # Get the heightmap dimensions
         height, width = marker_mask.shape
-        min_xy = int(border_offset / self.resolution_in_cm)
-        max_xy = int((min(height, width) - min_xy))
+        min_x = int(border_offset / self.resolution_in_cm)
+        min_y = min_x
+        max_x = int(height - min_x)
+        max_y = int(width - min_x)
 
-        assert max_xy < width, f"max_xy ({max_xy}) must be less than width ({width})"
-        assert max_xy < height, f"max_xy ({max_xy}) must be less than height ({height})"
+        #print(f"max_x, max_y: {max_x}, {max_y}")
+        #assert max_xy < width, f"max_xy ({max_xy}) must be less than width ({width})"
+        #assert max_xy < height, f"max_xy ({max_xy}) must be less than height ({height})"
 
         # Initialize the spawn locations array
         spawn_locations = np.zeros((n_spawns, 3), dtype=np.float32)
@@ -629,19 +632,20 @@ class ExomyTerrainManager():
             valid_location = False
             while not valid_location:
                 # Generate a random x and y
-                x = np.random.randint(min_xy, max_xy)
-                y = np.random.randint(min_xy, max_xy)
+                x = np.random.randint(min_x, max_x)
+                y = np.random.randint(min_y, max_y)
 
+                #print(f"x,y: {x},{y}")
                 # Check if the location is too close to a previous location
-                if marker_mask[y, x] == 0:
+                if marker_mask[x, y] == 0:
                     valid_location = True
                     spawn_locations[i, 0] = x
                     spawn_locations[i, 1] = y
-                    spawn_locations[i, 2] = heightmap[y, x]
+                    spawn_locations[i, 2] = 0.2 #cm
 
         # Scale and offset the spawn locations
-        spawn_locations[:, 0] = spawn_locations[:, 0] * self.resolution_in_cm + self._heightmap_manager.min_x
-        spawn_locations[:, 1] = spawn_locations[:, 1] * self.resolution_in_cm + self._heightmap_manager.min_y
+        spawn_locations[:, 0] = ((spawn_locations[:, 0] + self._heightmap_manager.min_x)/100)-3
+        spawn_locations[:, 1] = ((spawn_locations[:, 1] + self._heightmap_manager.min_y)/100)-5
         return spawn_locations
 
 if __name__ == "__main__":

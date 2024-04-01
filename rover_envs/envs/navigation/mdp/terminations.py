@@ -66,14 +66,13 @@ def collision_with_obstacles(env: RLTaskEnv, sensor_cfg: SceneEntityCfg, thresho
     return torch.where(forces_active, True, False)
 
 
-def falling(env: RLTaskEnv, low_bound : float, high_bound):
+def falling(env: RLTaskEnv, low_bound : float, high_bound : float) -> torch.Tensor:
     """
     Checks whether the rover has fallen off the environment :P
     """
     rover_asset: RigidObject = env.scene["robot"]
     roll, pitch, yaw = euler_xyz_from_quat(rover_asset.data.root_state_w[:, 3:7])
-    # If the physics timestep is too early, disregard, else, check for falling
 
-    return torch.where(low_bound < roll < high_bound |
-                       low_bound < pitch < high_bound |
-                       low_bound < yaw < high_bound, True, False)
+    #print(f"Roll: {roll} ----------------")
+    #print(f"roll_torch: {torch.where(((low_bound < pitch) & (pitch < high_bound)) | ((low_bound < roll) & (roll < high_bound)), True, False)}")
+    return torch.where(((low_bound < pitch) & (pitch < high_bound)) | ((low_bound < roll) & (roll < high_bound)), True, False)

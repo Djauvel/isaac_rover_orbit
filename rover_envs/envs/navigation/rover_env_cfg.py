@@ -92,15 +92,15 @@ class RoverSceneCfg(ExoMyTerrainSceneCfg):
     )
     #contact_sensor = None
 
-    height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Body",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[5.0, 5.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/terrain/terrain/EzGezV2ExtraLarge/Terrain_v1"],
-        max_distance=100.0,
-    )
+    #height_scanner = RayCasterCfg(
+    #    prim_path="{ENV_REGEX_NS}/Robot/Body",
+    #    offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
+    #    attach_yaw_only=True,
+    #    pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[5.0, 5.0]),
+    #    debug_vis=False,
+    #    mesh_prim_paths=["/World/terrain/terrain/EzGezV2ExtraLarge/Terrain_v1"],
+    #    max_distance=100.0,
+    #)
 
 
 @configclass
@@ -212,7 +212,7 @@ class RewardsCfg:
     far_from_target = RewTerm(
         func=mdp.far_from_target_reward,
         weight=-2.0,
-        params={"command_name": "target_pose", "threshold": 10.0}, #meter????
+        params={"command_name": "target_pose", "threshold": 5.0}, #meter
     )
     # Penalties for ERC specifically
     close_to_danger = RewTerm(
@@ -231,9 +231,8 @@ class RewardsCfg:
     fell_off = RewTerm(
         func=mdp.falling_penalty,
         weight=-2.0,
-        params={
-            "threshold" : -1.5
-        },
+        params={"low_bound" : torch.pi/2,
+                "high_bound": 2*torch.pi-torch.pi/2},
     )
 
 @configclass
@@ -254,11 +253,11 @@ class TerminationsCfg:
         params={"sensor_cfg": SceneEntityCfg(
             "contact_sensor"), "threshold": 1.0},
     )
-    #fell_off = DoneTerm(
-    #    func=mdp.falling,
-    #    params={"low_bound" : torch.pi/2,
-    #            "high_bound": 2*torch.pi-torch.pi/2},
-    #)
+    fell_off = DoneTerm(
+        func=mdp.falling,
+        params={"low_bound" : torch.pi/2,
+                "high_bound": 2*torch.pi-torch.pi/2},
+    )
 
 
 # "mdp.illegal_contact
@@ -350,7 +349,7 @@ class RoverEnvCfg(RLTaskEnvCfg):
         self.viewer.eye = (-6.0, -6.0, 3.5)
 
         # update sensor periods
-        if self.scene.height_scanner is not None:
-            self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        #if self.scene.height_scanner is not None:
+        #    self.scene.height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:
             self.scene.contact_sensor.update_period = self.sim.dt * self.decimation

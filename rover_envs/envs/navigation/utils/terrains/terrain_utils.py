@@ -641,7 +641,7 @@ class ExomyTerrainManager():
                     valid_location = True
                     spawn_locations[i, 0] = x
                     spawn_locations[i, 1] = y
-                    spawn_locations[i, 2] = 0.2 #cm
+                    spawn_locations[i, 2] = 0 #cm
 
         # Scale and offset the spawn locations
         spawn_locations[:, 0] = ((spawn_locations[:, 0] + self._heightmap_manager.min_x)/100)-3

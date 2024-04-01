@@ -7,6 +7,7 @@ import torch
 from omni.isaac.orbit.managers import SceneEntityCfg
 from omni.isaac.orbit.sensors import ContactSensor
 from omni.isaac.orbit.assets import RigidObject
+from omni.isaac.orbit.utils.math import euler_xyz_from_quat
 
 if TYPE_CHECKING:
     from omni.isaac.orbit.envs import RLTaskEnv
@@ -161,11 +162,13 @@ def time_penalty(env: RLTaskEnv, time_penalty : float) -> torch.Tensor:
     # Apply time penalty
     return torch.tensor(time_penalty, dtype=torch.float32)
 
-def falling_penalty(env: RLTaskEnv, threshold : float):
+def falling_penalty(env: RLTaskEnv, low_bound : float, high_bound : float) -> torch.Tensor:
     """
-    Checks whether the rover has fallen off the environment :P
+    Checks whether the rover has fallen off the environment based on the orientation of the rover.
     """
     rover_asset: RigidObject = env.scene["robot"]
-    linvel = rover_asset.data.root_state_w[:, 7:10]
+    roll, pitch, _ = euler_xyz_from_quat(rover_asset.data.root_state_w[:, 3:7])
 
-    return torch.where(linvel[:,2] < threshold, 1.0, 0.0)
+    #print(f"Roll: {roll} ----------------")
+    #print(f"roll_torch: {torch.where(((low_bound < pitch) & (pitch < high_bound)) | ((low_bound < roll) & (roll < high_bound)), True, False)}")
+    return torch.where(((low_bound < pitch) & (pitch < high_bound)) | ((low_bound < roll) & (roll < high_bound)), 1.0, 0.0)

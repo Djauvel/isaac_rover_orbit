@@ -6,7 +6,7 @@ from rover_envs.envs.navigation.learning.skrl.models import (Critic, Determinist
                                                              GaussianNeuralNetwork)
 
 
-def get_models(agent: str, env: RLTaskEnv, observation_space: Box, action_space: Box):
+def get_models(agent: str, env: RLTaskEnv, observation_space: Box, action_space: Box, mlp_layers : list):
     """
     Placeholder function for getting the models.
 
@@ -21,7 +21,7 @@ def get_models(agent: str, env: RLTaskEnv, observation_space: Box, action_space:
     """
 
     if agent == "PPO":
-        return get_model_gaussian_ERC(env, observation_space, action_space)
+        return get_model_gaussian_ERC(env, observation_space, action_space, mlp_layers)
     if agent == "TRPO":
         return get_model_gaussian(env, observation_space, action_space)
     if agent == "RPO":
@@ -33,7 +33,7 @@ def get_models(agent: str, env: RLTaskEnv, observation_space: Box, action_space:
 
     raise ValueError(f"Agent {agent} not supported.")
 
-def get_model_gaussian_ERC(env: RLTaskEnv, observation_space: Box, action_space: Box):
+def get_model_gaussian_ERC(env: RLTaskEnv, observation_space: Box, action_space: Box, mlp_layers : list):
     models = {}
     encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
 
@@ -44,7 +44,7 @@ def get_model_gaussian_ERC(env: RLTaskEnv, observation_space: Box, action_space:
         action_space=action_space,
         device=env.device,
         mlp_input_size=mlp_input_size,
-        mlp_layers=[256, 128, 64],  # Specify the number of neurons in each MLP layer
+        mlp_layers=mlp_layers,  # Specify the number of neurons in each MLP layer
         mlp_activation="leaky_relu",  # Specify the activation function, e.g., ReLU
         encoder_input_size=encoder_input_size,
         encoder_layers=[80, 60],
@@ -55,7 +55,7 @@ def get_model_gaussian_ERC(env: RLTaskEnv, observation_space: Box, action_space:
         action_space=action_space,
         device=env.device,
         mlp_input_size=mlp_input_size,
-        mlp_layers=[256,128, 64],  # Specify the number of neurons in each MLP layer
+        mlp_layers=mlp_layers,  # Specify the number of neurons in each MLP layer
         mlp_activation="leaky_relu",  # Specify the activation function, e.g., ReLU
         encoder_input_size=encoder_input_size,
         encoder_layers=[80, 60],

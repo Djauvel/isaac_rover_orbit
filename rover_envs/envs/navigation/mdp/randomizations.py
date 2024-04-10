@@ -42,7 +42,6 @@ def reset_root_state_rover(env: BaseEnv, env_ids: torch.Tensor, asset_cfg: Scene
         quat[:, 3] = torch.sin(angle / 2)
         orientations = quat
     except TypeError:
-        print("env_ids is None. Cannot proceed with calculations.")
         #orientations = torch.zeros_like(positions)  # or any other appropriate handling
         orientations = torch.zeros(env.num_envs, 4, device=env.device)
 

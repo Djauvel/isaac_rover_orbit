@@ -132,35 +132,35 @@ class ObservationCfg:
             params={
                 "marker_position": marker_positions[0],
             },
-            scale=1
+            scale=0.11
         )
         marker2 = ObsTerm(
             func=mdp.dist_to_marker,
             params={
                 "marker_position": marker_positions[1],
             },
-            scale=1
+            scale=0.11
         )
         marker3 = ObsTerm(
             func=mdp.dist_to_marker,
             params={
                 "marker_position": marker_positions[2],
             },
-            scale=1
+            scale=0.11
         )
         marker4 = ObsTerm(
             func=mdp.dist_to_marker,
             params={
                 "marker_position": marker_positions[3],
             },
-            scale=1
+            scale=0.11
         )
         danger = ObsTerm(
             func=mdp.dist_to_marker,
             params={
                 "marker_position": danger_position[0],
             },
-            scale=1
+            scale=0.11
         )
     #    height_scan = ObsTerm(
     #        func=mdp.height_scan_rover,
@@ -191,7 +191,7 @@ class RewardsCfg:
     reached_target = RewTerm(
         func=mdp.reached_target,
         weight=5.0,
-        params={"command_name": "target_pose", "threshold": 0.10}, # 10 cm from target is considered reached
+        params={"command_name": "target_pose", "threshold": 0.30}, # 10 cm from target is considered reached
     )
     angle_to_target = RewTerm(
         func=mdp.angle_to_target_penalty,
@@ -200,7 +200,7 @@ class RewardsCfg:
     )
     heading_soft_contraint = RewTerm(
         func=mdp.heading_soft_contraint,
-        weight=-0.5,
+        weight=-1,
         params={"asset_cfg": SceneEntityCfg(name="robot")},
     )
     collision = RewTerm(
@@ -211,7 +211,7 @@ class RewardsCfg:
     )
     far_from_target = RewTerm(
         func=mdp.far_from_target_reward,
-        weight=-2.0,
+        weight=-0.5,
         params={"command_name": "target_pose", "threshold": 5.0}, #meter
     )
     # Penalties for ERC specifically

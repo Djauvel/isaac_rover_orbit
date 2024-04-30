@@ -16,7 +16,7 @@ parser.add_argument("--video", action="store_true", default=False, help="Record 
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
+parser.add_argument("--num_envs", type=int, default=512, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default="ExomySandbox-v0", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
@@ -122,22 +122,6 @@ from torch.nn import ModuleList
 
 #Make experiment_cfg global
 
-sweep_configuration = {
-            'method': 'bayes',
-            'name': 'sweep',
-            'metric': {'goal': 'maximize', 'name': 'Reward / Total reward (mean)'},
-            'parameters': 
-            {
-                'lr': {'max': 1.e-2, 'min': 1.e-5},
-                'kl': {'max':0.024, 'min':0.002},
-                'hl': {'max':128,'min':32}, #aka rollouts
-                'MLP_layers' : {"values":[[256,128,64],
-                                        [512,256,128],
-                                        [512,512,256,128,64],
-                                        [1024,512,512,256,128,64]]}
-            }
-        }
-
 def train():
     time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     
@@ -155,21 +139,21 @@ def train():
 
     experiment_cfg = parse_skrl_cfg(args_cli.task + f"_{args_cli.agent}")
 
-    experiment_cfg['agent']['learning_rate'] = args_cli.lr
-    experiment_cfg['agent']['kl_threshold'] = args_cli.kl
-    experiment_cfg['agent']['rollouts'] = args_cli.hl
-    mlp_layers = args_cli.MLP_layers
-
-    # Remove characters that are not digits, commas, or spaces
-    cleaned_layers = [x for x in mlp_layers if x.isdigit() or x == ',' or x == ' ']
-
-    # Join digits to form integers, ignoring commas
-    formatted_arg = [int(''.join(group)) for group in ''.join(cleaned_layers).split(',') if group.strip().isdigit()]
-
-    experiment_cfg['agent']['mlp'] = formatted_arg
+    #experiment_cfg['agent']['learning_rate'] = args_cli.lr
+    #experiment_cfg['agent']['kl_threshold'] = args_cli.kl
+    #experiment_cfg['agent']['rollouts'] = args_cli.hl
+    #mlp_layers = args_cli.MLP_layers
+    ## Remove characters that are not digits, commas, or spaces
+    #cleaned_layers = [x for x in mlp_layers if x.isdigit() or x == ',' or x == ' ']
+    ## Join digits to form integers, ignoring commas
+    #formatted_arg = [int(''.join(group)) for group in ''.join(cleaned_layers).split(',') if group.strip().isdigit()]
+    #experiment_cfg['agent']['mlp'] = formatted_arg
     
     # Manual override for mlp layers
-    #experiment_cfg['agent']['mlp'] = [1024,512,512,256,128,64]
+    experiment_cfg['agent']['mlp'] = [512,256,128,64]
+    experiment_cfg['agent']['learning_rate'] = 0.003860729495086871
+    experiment_cfg['agent']['kl_threshold'] = 0.021607491980876997
+    experiment_cfg['agent']['rollouts'] = 84
 
     print(f"Initializing training with Hyperparameters:") 
     print(f"kl-threshold: {experiment_cfg['agent']['kl_threshold']}")
@@ -203,53 +187,15 @@ def train():
 
     agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, mlp_layers)
 
+    agent_policy_path = "/home/djauvel/isaac_rover_orbit/examples/02_train/logs/skrl/rover/Apr23_15-02-32_PPO_BEST3/checkpoints/agent_5600_Pretty_Good.pt"
+    agent.load(agent_policy_path)
+
     trainer = SkrlSequentialLogTrainer(cfg=trainer_cfg, agents=agent, env=env)
     trainer.train()
 
-    wandb.teardown()
+    
     env.close()
     simulation_app.close()
-
-def train_sweeps():
-    time_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    
-    wandb.init(
-    project='isaac_rover_orbit_ERC',  # Specify your project name
-    entity='g666',    # Specify your username or team name
-    name=f'ERC_{time_str}',  # Specify a name for your experiment
-    notes='ERC_TEST',  # Add notes or description
-    tags=['reinforcement-learning', 'agent-training'],  # Add relevant tags
-    sync_tensorboard=True,
-    )
-
-    train()
-
-    
-
-#def sweep():
-
-
-    #api = wandb.Api()
-    #sweep = api.sweep(path=f'g666/isaac_rover_orbit_ERC/{sweep_id}')
-    
-    #print(f"WANDB CONFIG PARAMETERS: {sweep}")
-    #print(f"WANDB CONFIG PARAMETERS: {wandb.config}")
-    #print(f"WANDB CONFIG PARAMETERS: {wandb.Api.sweep}")
-    #m = wandb.config.parameters["lr"]
-    #print(f"lr : {m}")
-    
-    #while wandb.config:
-    #    try:
-    #        experiment_cfg["agent"]["learning_rate"] = wandb.config.lr
-    #        experiment_cfg["agent"]["kl_threshold"] = wandb.config.kl
-    #        experiment_cfg["agent"]["rollouts"] = wandb.config.hl
-    #        experiment_cfg["agent"]["mlp"] = wandb.config.MLP_layers
-    #    except:
-    #        print("Not ready yet")
-
-    #train()
-
-
 
 if __name__ == "__main__": 
     # Run the sweep

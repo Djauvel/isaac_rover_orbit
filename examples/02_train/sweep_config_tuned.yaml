@@ -1,0 +1,37 @@
+program: train.py
+method: bayes
+metric:
+  goal: maximize
+  name: Reward / Total reward (mean)
+name: TweakedSweepsNewEnv
+parameters:
+  MLP_layers:
+    values:
+      - - 256
+        - 128
+        - 64
+      - - 512
+        - 256
+        - 128
+      - - 512
+        - 256
+        - 128
+        - 64
+      - - 1024
+        - 512
+        - 256
+        - 128
+        - 64
+  hl:
+    distribution: int_uniform
+    max: 100
+    min: 32
+  kl:
+    distribution: uniform
+    max: 0.024
+    min: 0.002
+  lr:
+    distribution: uniform
+    max: 0.01
+    min: 1e-05
+  

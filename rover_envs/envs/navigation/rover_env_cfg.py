@@ -35,10 +35,10 @@ from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBa
 # These positions have been adjusted with -300 and -500 respectively
 # All positions are in cm, might have to readjust
 marker_positions = [
-            (.45,3.75,0.0),
+            (5.45,3.75,0.0),
             (2.14,2.04,0.0),
-            (2.02,-4.27,0.0),
-            (-.74,-2.70,0.0)
+            (-5.02,-4.27,0.0),
+            (-6.74,-2.70,0.0)
         ]
 
 danger_position = [
@@ -82,15 +82,16 @@ class RoverSceneCfg(ExoMyTerrainSceneCfg):
     # AAU_ROVER_SIMPLE_CFG.replace(
     #     prim_path="{ENV_REGEX_NS}/Robot")
 
-    contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
-        filter_prim_paths_expr=["/World/terrain/terrain/obstacles/ArUcoMarker1/imagetostl_mesh0",
-                                "/World/terrain/terrain/obstacles/ArUcoMarker2/imagetostl_mesh0",
-                                "/World/terrain/terrain/obstacles/ArUcoMarker3/imagetostl_mesh0",
-                                "/World/terrain/terrain/obstacles/ArUcoMarker4/imagetostl_mesh0",
-                                "/World/terrain/terrain/obstacles/ArUcoMarker5/imagetostl_mesh0"],
-    )
-    #contact_sensor = None
+    #contact_sensor = ContactSensorCfg(
+    #    prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
+    #    #filter_prim_paths_expr=[]
+    #    filter_prim_paths_expr=["/World/terrain/terrain/obstacles/ArUcoMarker1/imagetostl_mesh0",
+    #                            "/World/terrain/terrain/obstacles/ArUcoMarker2/imagetostl_mesh0",
+    #                            "/World/terrain/terrain/obstacles/ArUcoMarker3/imagetostl_mesh0",
+    #                            "/World/terrain/terrain/obstacles/ArUcoMarker4/imagetostl_mesh0",
+    #                            "/World/terrain/terrain/obstacles/ArUcoMarker5/imagetostl_mesh0"],
+    #)
+    contact_sensor = None
 
     #height_scanner = RayCasterCfg(
     #    prim_path="{ENV_REGEX_NS}/Robot/Body",
@@ -167,7 +168,7 @@ class ObservationCfg:
     #        scale=1,
     #        params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
     #    )
-#
+
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True
@@ -182,58 +183,63 @@ class RewardsCfg:
         weight=-0.1,
         params={},
     )
-
-    distance_to_target = RewTerm(
-        func=mdp.distance_to_target_reward,
-        weight=5.0,
-        params={"command_name": "target_pose"},
-    )
+    #distance_to_target = RewTerm(
+    #    func=mdp.distance_to_target_reward,
+    #    weight=3.0, #3 at best
+    #    params={"command_name": "target_pose"},
+    #)
     reached_target = RewTerm(
         func=mdp.reached_target,
-        weight=5.0,
-        params={"command_name": "target_pose", "threshold": 0.30}, # 10 cm from target is considered reached
+        weight=10.0, #10 at best
+        params={"command_name": "target_pose", "threshold": 0.30}, # 30 cm from target is considered reached
     )
-    angle_to_target = RewTerm(
-        func=mdp.angle_to_target_penalty,
+    #angle_to_target_reward = RewTerm(
+    #    func=mdp.angle_to_target_reward,
+    #    weight=0.5,
+    #    params={"command_name": "target_pose"},
+    #)
+    #angle_to_target_penalty = RewTerm(
+    #    func=mdp.angle_to_target_penalty,
+    #    weight=-1.0,
+    #    params={"command_name": "target_pose"},
+    #)
+    heading_soft_contraint_rev = RewTerm(
+        func=mdp.heading_soft_contraint_rev,
         weight=-1.5,
-        params={"command_name": "target_pose"},
-    )
-    heading_soft_contraint = RewTerm(
-        func=mdp.heading_soft_contraint,
-        weight=-1,
         params={"asset_cfg": SceneEntityCfg(name="robot")},
-    )
-    collision = RewTerm(
-        func=mdp.collision_penalty,
-        weight=-2.0,
-        params={"sensor_cfg": SceneEntityCfg(
-            "contact_sensor"), "threshold": 1.0},
     )
     far_from_target = RewTerm(
         func=mdp.far_from_target_reward,
-        weight=-0.5,
-        params={"command_name": "target_pose", "threshold": 5.0}, #meter
+        weight=-2.0,
+        params={"command_name": "target_pose", "threshold": 6.0}, #meter
     )
     # Penalties for ERC specifically
-    close_to_danger = RewTerm(
-        func=mdp.danger_landmark_penalty,
-        weight=-2.0,
-        params={"threshold": 0.50,
-                "marker_position": danger_position[0]},
-    )
-    time_penalty = RewTerm(
-        func=mdp.time_penalty,
-        weight=-1.0,
-        params={
-            "time_penalty" : 0.05
-        }
-    )
-    fell_off = RewTerm(
-        func=mdp.falling_penalty,
-        weight=-2.0,
-        params={"low_bound" : torch.pi/2,
-                "high_bound": 2*torch.pi-torch.pi/2},
-    )
+    #close_to_danger = RewTerm(
+    #    func=mdp.danger_landmark_penalty,
+    #    weight=-10.0,
+    #    params={"threshold": 0.50,
+    #            "marker_position": danger_position[0]},
+    #)
+    #fell_off = RewTerm(
+    #    func=mdp.falling_penalty,
+    #    weight=-100.0,
+    #    params={"low_bound" : torch.pi/2,
+    #            "high_bound": 2*torch.pi-torch.pi/2},
+    #)
+    #time_penalty = RewTerm(
+    #    func=mdp.time_penalty,
+    #    weight=-1.0,
+    #    params={
+    #        "time_penalty" : 0.1
+    #    }
+    #)
+       #collision = RewTerm(
+    #    func=mdp.collision_penalty,
+    #    weight=-2.0,
+    #    params={"sensor_cfg": SceneEntityCfg(
+    #        "contact_sensor"), "threshold": 1.0},
+    #)
+    
 
 @configclass
 class TerminationsCfg:
@@ -242,24 +248,51 @@ class TerminationsCfg:
     time_limit = DoneTerm(func=mdp.time_out, time_out=True)
     is_success = DoneTerm(
         func=mdp.is_success,
-        params={"command_name": "target_pose", "threshold": 0.18}, #distance to target for success
+        params={"command_name": "target_pose", "threshold": 0.30}, #distance to target for success
     )
     far_from_target = DoneTerm(
         func=mdp.far_from_target,
         params={"command_name": "target_pose", "threshold": 10.0}, # Kinda obsolete for ERC env
     )
-    collision = DoneTerm(
-        func=mdp.collision_with_obstacles,
-        params={"sensor_cfg": SceneEntityCfg(
-            "contact_sensor"), "threshold": 1.0},
-    )
-    fell_off = DoneTerm(
-        func=mdp.falling,
-        params={"low_bound" : torch.pi/2,
-                "high_bound": 2*torch.pi-torch.pi/2},
-    )
-
-
+    #collision = DoneTerm(
+    #    func=mdp.collision_with_obstacles,
+    #    params={"sensor_cfg": SceneEntityCfg(
+    #        "contact_sensor"), "threshold": 1.0},
+    #)
+    #fell_off = DoneTerm(
+    #    func=mdp.falling,
+    #    params={"low_bound" : torch.pi/2,
+    #            "high_bound": 2*torch.pi-torch.pi/2},
+    #)
+    #marker_collision0 = DoneTerm(
+    #    func=mdp.dist_to_marker_doneTerm,
+    #    params={
+    #            "marker_position": marker_positions[0],
+    #            "threshold" : 0.1,
+    #        }
+    #)
+    #marker_collision1 = DoneTerm(
+    #    func=mdp.dist_to_marker_doneTerm,
+    #    params={
+    #            "marker_position": marker_positions[1],
+    #            "threshold" : 0.1,
+    #        }
+    #)
+    #marker_collision2 = DoneTerm(
+    #    func=mdp.dist_to_marker_doneTerm,
+    #    params={
+    #            "marker_position": marker_positions[2],
+    #            "threshold" : 0.1,
+    #        }
+    #)
+    #marker_collision3 = DoneTerm(
+    #    func=mdp.dist_to_marker_doneTerm,
+    #    params={
+    #            "marker_position": marker_positions[3],
+    #            "threshold" : 0.1,
+    #        }
+#    )
+#
 # "mdp.illegal_contact
 @configclass
 class CommandsCfg:

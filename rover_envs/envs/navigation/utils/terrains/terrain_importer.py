@@ -11,7 +11,6 @@ from omni.isaac.orbit.markers import VisualizationMarkers
 from omni.isaac.orbit.markers.config import CUBOID_MARKER_CFG
 from omni.isaac.orbit.terrains import TerrainImporter, TerrainImporterCfg
 from omni.isaac.orbit.utils.math import quat_rotate_inverse, wrap_to_pi, yaw_quat
-
 from .terrain_utils import TerrainManager
 from .terrain_utils import ExomyTerrainManager
 
@@ -71,29 +70,128 @@ class TerrainBasedPositionCommand(CommandTerm):
     Implementation specific functions.
     """
 
+    #def _resample_command(self, env_ids: Sequence[int]):
+    #    # sample new position targets from the terrain
+    #    # TODO: need to add that here directly
+    #    self.pos_command_w[env_ids] = self.terrain.sample_new_targets(env_ids)
+    #    
+    #    # offset the position command by the current root position
+    #    self.pos_command_w[env_ids, 2] += self.robot.data.default_root_state[env_ids, 2]
+#
+    #    if self.cfg.simple_heading:
+    #        # set heading command to point towards target
+    #        target_vec = self.pos_command_w[env_ids] - self.robot.data.root_pos_w[env_ids]
+    #        target_direction = torch.atan2(target_vec[:, 1], target_vec[:, 0])
+    #        flipped_heading = wrap_to_pi(target_direction + torch.pi)
+    #        self.heading_command_w[env_ids] = torch.where(
+    #            wrap_to_pi(target_direction - self.robot.data.heading_w[env_ids]).abs()
+    #            < wrap_to_pi(flipped_heading - self.robot.data.heading_w[env_ids]).abs(),
+    #            target_direction,
+    #            flipped_heading,
+    #        )
+    #    else:
+    #        # random heading command
+    #        r = torch.empty(len(env_ids), device=self.device)
+    #        self.heading_command_w[env_ids] = r.uniform_(*self.cfg.ranges.heading)
+
     def _resample_command(self, env_ids: Sequence[int]):
         # sample new position targets from the terrain
         # TODO: need to add that here directly
         self.pos_command_w[env_ids] = self.terrain.sample_new_targets(env_ids)
+        
         # offset the position command by the current root position
         self.pos_command_w[env_ids, 2] += self.robot.data.default_root_state[env_ids, 2]
-
-        if self.cfg.simple_heading:
-            # set heading command to point towards target
-            target_vec = self.pos_command_w[env_ids] - self.robot.data.root_pos_w[env_ids]
-            target_direction = torch.atan2(target_vec[:, 1], target_vec[:, 0])
-            flipped_heading = wrap_to_pi(target_direction + torch.pi)
-            self.heading_command_w[env_ids] = torch.where(
-                wrap_to_pi(target_direction - self.robot.data.heading_w[env_ids]).abs()
-                < wrap_to_pi(flipped_heading - self.robot.data.heading_w[env_ids]).abs(),
-                target_direction,
-                flipped_heading,
-            )
+        target_vec = self.pos_command_w[env_ids] - self.robot.data.root_pos_w[env_ids]
+        #--------------
+        yaw_quat_w = yaw_quat(self.robot.data.root_quat_w)
+        #print(f"SHAPES OF TENSORS FOR DEBUG YAW{yaw_quat_w.shape[0]} and Targ{target_vec.shape[0]}")
+        if target_vec.shape[0] < yaw_quat_w.shape[0]:
+            # Shrink target_vec to match the size of yaw_quat_w
+            temp_yaw_quat_w = yaw_quat_w[:target_vec.shape[0], :]
+            target_vector_b = quat_rotate_inverse(temp_yaw_quat_w, target_vec)
         else:
-            # random heading command
-            r = torch.empty(len(env_ids), device=self.device)
-            self.heading_command_w[env_ids] = r.uniform_(*self.cfg.ranges.heading)
+            target_vector_b = quat_rotate_inverse(yaw_quat_w, target_vec)
+        #-----------
+        
+        angle = torch.atan2(target_vector_b[:, 1], target_vector_b[:, 0])
+        # Bool to determine whether the target point has been generated in front of the rover.
+        #within_threshold = (angle > -(7*torch.pi)/4) & (angle < -(5*torch.pi)/4)
+        #within_threshold = (angle > -(7*torch.pi)/4) | (angle < -(5*torch.pi)/4)
+        within_threshold = True
+        # TESTER
+        #within_threshold = (angle < -(7*torch.pi)/4) & (angle > -(5*torch.pi)/4)
+        #print(f"WITHIN THRESHOLD: {within_threshold}")
 
+        # If not, resample new targets
+        while not within_threshold:
+            new_pos_command_w = self.terrain.sample_new_targets(env_ids)[~within_threshold]
+            new_target_vec = new_pos_command_w - self.robot.data.root_pos_w[env_ids][~within_threshold]
+
+            # Shrink new_target_vec to match the size of yaw_quat_w
+            if new_target_vec.shape[0] < yaw_quat_w.shape[0]:
+                temp_yaw_quat_w = yaw_quat_w[:target_vec.shape[0], :]
+                new_target_vector_b = quat_rotate_inverse(temp_yaw_quat_w, new_target_vec)
+            else:
+                # Calculate new target_vector_b and angle
+                new_target_vector_b = quat_rotate_inverse(yaw_quat_w, new_target_vec)
+
+            new_angle = torch.atan2(new_target_vector_b[:, 1], new_target_vector_b[:, 0])
+            #print("New angles:", new_angle)
+            # Update self.pos_command_w only for the positions that need to be resampled
+            self.pos_command_w[env_ids][~within_threshold] = new_pos_command_w
+
+            # Update within_threshold for the new positions
+            #within_threshold[~within_threshold] = (new_angle > -(7*torch.pi)/4) | (new_angle < -(5*torch.pi)/4)
+            within_threshold = True
+            #print("Within threshold:", within_threshold)
+            #print("Loop condition:", not within_threshold.all())
+        
+        ## sample new position targets from the terrain
+        ## TODO: need to add that here directly
+        #self.pos_command_w[env_ids] = self.terrain.sample_new_targets(env_ids)
+#
+        ## offset the position command by the current root position
+        #self.pos_command_w[env_ids, 2] += self.robot.data.default_root_state[env_ids, 2]
+        #target_vec = self.pos_command_w[env_ids] - self.robot.data.root_pos_w[env_ids]
+#
+        #yaw_quat_w = yaw_quat(self.robot.data.root_quat_w)
+#
+        #if target_vec.shape[0] < yaw_quat_w.shape[0]:
+        #    # Shrink target_vec to match the size of yaw_quat_w
+        #    temp_yaw_quat_w = yaw_quat_w[:target_vec.shape[0], :]
+        #    target_vector_b = quat_rotate_inverse(temp_yaw_quat_w, target_vec)
+        #else:
+        #    target_vector_b = quat_rotate_inverse(yaw_quat_w, target_vec)
+#
+        #angle = torch.atan2(target_vector_b[:, 1], target_vector_b[:, 0])
+#
+        ## Bool to determine whether the target point has been generated in front of the rover.
+        #within_threshold = (angle > -(7*torch.pi)/4) & (angle < -(5*torch.pi)/4)
+        ## TESTER
+        ## within_threshold = (angle < -(7*torch.pi)/4) & (angle > -(5*torch.pi)/4)
+        ## print(f"WITHIN THRESHOLD: {within_threshold}")
+#
+        ## If not, resample new targets
+        #while not within_threshold.all():
+        #    new_pos_command_w = self.terrain.sample_new_targets(env_ids)[~within_threshold]
+        #    new_target_vec = new_pos_command_w - self.robot.data.root_pos_w[env_ids][~within_threshold]
+#
+        #    # Shrink new_target_vec to match the size of yaw_quat_w
+        #    if new_target_vec.shape[0] < yaw_quat_w.shape[0]:
+        #        temp_yaw_quat_w = yaw_quat_w[:target_vec.shape[0], :]
+        #        new_target_vector_b = quat_rotate_inverse(temp_yaw_quat_w, target_vec)
+        #    else:
+        #        # Calculate new target_vector_b and angle
+        #        new_target_vector_b = quat_rotate_inverse(yaw_quat_w, target_vec)
+#
+        #    new_angle = torch.atan2(new_target_vector_b[:, 1], new_target_vector_b[:, 0])
+#
+        #    # Update self.pos_command_w only for the positions that need to be resampled
+        #    self.pos_command_w[env_ids][~within_threshold] = new_pos_command_w
+#
+        #    # Update within_threshold for the new positions
+        #    within_threshold = (new_angle > -(7*torch.pi)/4) & (new_angle < -(5*torch.pi)/4)
+        
     def _update_command(self):
         """Re-target the position command to the current root position and heading."""
         target_vec = self.pos_command_w - self.robot.data.root_pos_w[:, :3]
@@ -190,8 +288,8 @@ class ExomyTerrainImporter(TerrainImporter):
         self._terrainManager = ExomyTerrainManager(num_envs=self._cfg.num_envs, device=self.device)
         
         # Specifying the bounds of the area where we want to generate waypoints [low_bound,high_bound] in meters
-        self.x_bound = [-3,3]
-        self.y_bound = [-5,5]
+        self.r_max = 5
+        self.r_min = 2
 
     def sample_new_targets(self, env_ids):
         # We need to keep track of the original env_ids, because we need to resample some of them
@@ -213,24 +311,39 @@ class ExomyTerrainImporter(TerrainImporter):
                 env_ids, target_position[env_ids, 0:2], device=self.device)
 
         # Adjust the height of the target, so that it matches the terrain
-        target_position[original_env_ids, 2] = self._terrainManager._heightmap_manager.get_height_at(
-            target_position[original_env_ids, 0:2])
+        target_position[original_env_ids, 2] = 0.3
 
         return target_position[original_env_ids]
 
     def generate_random_targets(self, env_ids, target_position):
         """
         This function generates random targets for the rover to navigate to.
-        The targets are generated in a rectangle around the environment origin.
+        The targets are generated within an annular region defined by two circles.
 
         Args:
             env_ids: The ids of the environments for which we need to generate targets.
             target_position: The target position buffer.
         """
-        target_position[env_ids, 0] = torch.rand(len(env_ids), device=self.device) * (self.x_bound[1] - self.x_bound[0]) + self.x_bound[0]
-        target_position[env_ids, 1] = torch.rand(len(env_ids), device=self.device) * (self.y_bound[1] - self.y_bound[0]) + self.y_bound[0]
+        randomized = True
 
-        #print(f"Generated Targets: {target_position}")
+        # Generate random angles within annular region
+        angles = torch.rand(len(env_ids), device=self.device) * 2 * torch.pi
+        
+        if randomized:
+            # Generate random radii within annular region
+            radii = torch.sqrt(torch.rand(len(env_ids), device=self.device)) * (self.r_max - self.r_min) + self.r_min
+
+            # Convert polar coordinates to Cartesian coordinates
+            target_position[env_ids, 0] = radii * torch.cos(angles)
+            target_position[env_ids, 1] = radii * torch.sin(angles)
+
+            # Uncomment the following line to print generated targets
+            # print(f"Generated Targets: {target_position}")
+        else: 
+            target_position[env_ids, 0] = torch.zeros_like(angles) + 2
+            target_position[env_ids, 1] = torch.zeros_like(angles) + 0
+
+
         return target_position[env_ids]
 
     def get_spawn_locations(self):

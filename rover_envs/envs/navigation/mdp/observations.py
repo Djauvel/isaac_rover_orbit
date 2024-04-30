@@ -21,6 +21,7 @@ def angle_to_target_observation(env: RLTaskEnv, command_name: str) -> torch.Tens
 
     # Calculate the angle between the rover's heading [1, 0] and the vector to the target.
     angle = torch.atan2(target_vector_b[:, 1], target_vector_b[:, 0])
+    #print(f"ANGLE TO TARGET: {angle}")
 
     return angle.unsqueeze(-1)
 
@@ -30,6 +31,8 @@ def distance_to_target_euclidean(env: RLTaskEnv, command_name: str):
     target = env.command_manager.get_command(command_name)
     target_position = target[:, :2]
     distance: torch.Tensor = torch.norm(target_position, p=2, dim=-1)
+
+    #print(f"DISTANCE TO TARGET: {distance}")
     return distance.unsqueeze(-1)
 
 

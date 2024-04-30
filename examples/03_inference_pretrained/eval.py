@@ -14,8 +14,8 @@ parser.add_argument("--video", action="store_true", default=False, help="Record 
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")
+parser.add_argument("--num_envs", type=int, default=512, help="Number of environments to simulate.")
+parser.add_argument("--task", type=str, default="ExomySandbox-v0", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
 args_cli = parser.parse_args()
@@ -141,13 +141,18 @@ def main():
     trainer_cfg = experiment_cfg["trainer"]
     trainer_cfg["timesteps"] = 1000000
 
-    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg)
+    #mlp_layers = [1024,512,256,128,64]
+    #mlp_layers = [512,512,256,128,64]
+    mlp_layers = [512,256,128,64]
+    #mlp_layers = [512,256,128]
+    #mlp_layers = [256,128,64]
 
-    # Get the checkpoint path from the experiment configuration
-    print(f'args_cli.task: {args_cli.task}')
-    agent_policy_path = gym.spec(args_cli.task).kwargs.pop("best_model_path")
+    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, mlp_layers)
 
+    agent_policy_path = "/home/djauvel/isaac_rover_orbit/examples/02_train/logs/skrl/rover/Apr23_19-19-42_PPO/checkpoints/agent_9200.pt"
+    #agent_policy_path = "/home/djauvel/isaac_rover_orbit/examples/02_train/logs/skrl/rover/Apr23_17-58-17_PPO/checkpoints/best_agent.pt"
     agent.load(agent_policy_path)
+
     trainer_cfg = experiment_cfg["trainer"]
     print(trainer_cfg)
 

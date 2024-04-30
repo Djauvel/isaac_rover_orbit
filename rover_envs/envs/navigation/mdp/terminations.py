@@ -76,3 +76,20 @@ def falling(env: RLTaskEnv, low_bound : float, high_bound : float) -> torch.Tens
     #print(f"Roll: {roll} ----------------")
     #print(f"roll_torch: {torch.where(((low_bound < pitch) & (pitch < high_bound)) | ((low_bound < roll) & (roll < high_bound)), True, False)}")
     return torch.where(((low_bound < pitch) & (pitch < high_bound)) | ((low_bound < roll) & (roll < high_bound)), True, False)
+
+def dist_to_marker_doneTerm(env: RLTaskEnv, marker_position, threshold : float) -> torch.Tensor:
+    """Calculate the distance to the ArUco Markers in the environment 
+
+        This function uses the array of marker positions to determine and return the distance to any given marker
+    """
+    rover_asset: RigidObject = env.scene["robot"]
+    rover_position = rover_asset.data.root_state_w[:, :3]
+
+    marker_position_tensor = torch.tensor(marker_position, dtype=torch.float32, device=rover_position.device)
+
+    # Calculate distance
+    distance: torch.Tensor = torch.norm(marker_position_tensor - rover_position, p=2, dim=-1)
+
+    #print(f"Distance to marker: {distance}")
+
+    return torch.where(distance < threshold, True, False)

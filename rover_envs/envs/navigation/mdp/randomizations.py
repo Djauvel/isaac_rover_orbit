@@ -18,22 +18,23 @@ def reset_root_state_rover(env: BaseEnv, env_ids: torch.Tensor, asset_cfg: Scene
     
     # Get the terrain and sample new spawn locations
     terrain: ExomyTerrainImporter = env.scene.terrain
+    
+    # Bool for randomized or forced spawn locations. Forced is (0,0,z_offset) with orientation (0,0,0,0)
+    randomized = True
+
     spawn_locations = terrain.get_spawn_locations()
+
     
     try:
         spawn_index = torch.randperm(spawn_locations.size(0), device=env.device)[:len(env_ids)]
     except:
         spawn_index = torch.randperm(spawn_locations.size(0), device=env.device)[:env.num_envs]
-
     spawn_locations = spawn_locations[spawn_index]
-
     # Add a small z offset to the spawn locations to avoid spawning the rover inside the terrain.
     positions = spawn_locations
     positions[:, 2] += z_offset
-
     #print(f"Env_ids: {env_ids}")
     #print(f"env.num_envs: {env.num_envs}")
-
     # Random angle
     try:
         angle = torch.rand(len(env_ids), device=env.device) * 2 * torch.pi
@@ -44,6 +45,10 @@ def reset_root_state_rover(env: BaseEnv, env_ids: torch.Tensor, asset_cfg: Scene
     except TypeError:
         #orientations = torch.zeros_like(positions)  # or any other appropriate handling
         orientations = torch.zeros(env.num_envs, 4, device=env.device)
+    
+    if not randomized:
+        orientations = torch.zeros(env.num_envs, 4, device=env.device)
+        orientations[:, 0] = 1.0  # Set the scalar component of quaternions to 1
 
     # Update the environment origins, so that the terrain targets are sampled around the new origin.
     #env.scene.terrain.env_origins[env_ids] = positions

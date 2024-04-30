@@ -17,7 +17,7 @@ class ExoMyTerrainSceneCfg(InteractiveSceneCfg):
         collision_group=-1,
         usd_path=os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
-            "environment_usd/ExoMyTerrain_Large.usd",
+            "environment_usd/MegaEnv.usd",
             
         ),
     )

@@ -6,6 +6,7 @@ import numpy as np
 import pymeshlab
 import torch
 
+
 from rover_envs.envs.navigation.utils.terrains.usd_utils import get_triangles_and_vertices_from_prim
 
 directory_terrain_utils = os.path.dirname(os.path.abspath(__file__))
@@ -91,8 +92,6 @@ class TerrainManager():
 
     def __init__(self, num_envs: int, device: str):
         self.dir_path = os.path.dirname(os.path.realpath(__file__))
-        terrain_path = os.path.join(self.dir_path, "../terrain_data/map.ply")
-        rock_mesh_path = os.path.join(self.dir_path, "../terrain_data/big_stones.ply")
         terrain_path = "/World/terrain/hidden_terrain/terrain"
         rock_mesh_path = "/World/terrain/obstacles/obstacles"
 
@@ -462,7 +461,7 @@ class ExomyTerrainManager():
         self.dir_path = os.path.dirname(os.path.realpath(__file__))
         #terrain_path = os.path.join(self.dir_path, "../terrain_data/map.ply")
         #rock_mesh_path = os.path.join(self.dir_path, "../terrain_data/big_stones.ply")
-        terrain_path = "/World/terrain/terrain/EzGezV2ExtraLarge/Terrain_v1/Body6"
+        terrain_path = "/World/terrain/terrain/Terrain/TerrainMesh"
         markers_path = "/World/terrain/terrain/obstacles/"
 
         # Temporary kinda scuffed solution for this specific training area
@@ -591,7 +590,7 @@ class ExomyTerrainManager():
             self,
             marker_mask: np.ndarray,
             heightmap, n_spawns: int = 100,
-            border_offset: float = 20.0,
+            border_offset: float = 900.0,
             seed=None
     ) -> np.ndarray:
         """Generate random rover spawn locations. Calculates random x,y checks if it is a marker, if not,
@@ -599,7 +598,8 @@ class ExomyTerrainManager():
 
         Args:
             marker_mask (np.ndarray): A binary mask indicating the locations of markers and a little extra room.
-            n_spawns (int, optional): The number of spawn locations to generate. Defaults to 1.
+            n_spawns (int, optional): Thterrain_path = os.path.join(self.dir_path, "../terrain_data/map.ply")
+        rock_mesh_path = os.path.join(self.dir_path, "../terrain_data/big_stones.ply")e number of spawn locations to generate. Defaults to 1.
             min_dist (float, optional): The minimum distance between two spawn locations. Defaults to 1.0.
 
         Returns:
@@ -614,6 +614,7 @@ class ExomyTerrainManager():
 
         # Get the heightmap dimensions
         height, width = marker_mask.shape
+        #print(f" HEIGHMAP DIMESNIONS {marker_mask.shape} ---------------------------------------------")
         min_x = int(border_offset / self.resolution_in_cm)
         min_y = min_x
         max_x = int(height - min_x)
@@ -641,11 +642,12 @@ class ExomyTerrainManager():
                     valid_location = True
                     spawn_locations[i, 0] = x
                     spawn_locations[i, 1] = y
-                    spawn_locations[i, 2] = 0 #cm
+                    spawn_locations[i, 2] = 0.3 #m
 
         # Scale and offset the spawn locations
-        spawn_locations[:, 0] = ((spawn_locations[:, 0] + self._heightmap_manager.min_x)/100)-3
-        spawn_locations[:, 1] = ((spawn_locations[:, 1] + self._heightmap_manager.min_y)/100)-5
+        spawn_locations[:, 0] = ((spawn_locations[:, 0] + self._heightmap_manager.min_x)/100)-10
+        spawn_locations[:, 1] = ((spawn_locations[:, 1] + self._heightmap_manager.min_y)/100)-10
+        #spawn_locations[:, 2] = self._heightmap_manager.get_height_at(spawn_locations[:, 0:2])
         return spawn_locations
 
 if __name__ == "__main__":
